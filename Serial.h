@@ -4,9 +4,7 @@
 /*!
   \file
   \brief RS-232
-
   \author Satofumi Kamimura
-
   $Id$
 */
 

@@ -57,7 +57,7 @@ bool Receive_recorder::open(Connection* connection, const char* file_path)
         pimpl->error_message_ = "connection is NULL.";
         return false;
     }
-
+	//注意要打开文件，进行txt的记录
     bool ret = pimpl->open_file(file_path);
     if (!ret) {
         return false;

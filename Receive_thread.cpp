@@ -52,14 +52,18 @@ struct Receive_thread::pImpl
           play_speed_magnification_(1.0), csv_recording_scans_(0)
     {
     }
-
+	//由接收线程的内部run函数调用
     void receive_thread(void)
     {
         quit_ = false;
         next_scan_index_ = 0;
         const long scan_msec = urg_.scan_usec() / 1000.0;
         double timestamp_unit = product_timestamp_unit(urg_);
-        if (!start_scanning(true)) {
+
+		//线程开始和具体的调用具体的设备了
+        if (!start_scanning(true))
+		{
+			//当前线程抛出消息，回调
             emit thread_->receive_failed(urg_.what());
             return;
         }
@@ -85,86 +89,96 @@ struct Receive_thread::pImpl
         QTime cycle_timer;
         int consecutive_loss_times = 0;
 
-        while (true) {
+        while (true)
+		{
             msleep(1);
-
-            if (!is_pause) {
-                if (!receive_data(distance, intensity, timestamp)) {
-                    if (mode_ == Seekable) {
+            if (!is_pause) 
+			{
+				//接收数据
+                if (!receive_data(distance, intensity, timestamp)) 
+				{
+                    if (mode_ == Seekable) 
+					{
                         emit thread_->play_completed();
-                        if (left_recording_scans > 0) {
+                        if (left_recording_scans > 0) 
+						{
                             emit thread_->csv_recording_completed();
                         }
                         return;
                     }
                     ++retry_count;
-                    if ((retry_count * Retry_wait_msec) > Retry_timeout_msec) {
+                    if ((retry_count * Retry_wait_msec) > Retry_timeout_msec) 
+					{
                         emit thread_->receive_failed(urg_.what());
                         return;
                     }
+					//等待重试
                     msleep(Retry_wait_msec);
-
-                    if (!start_scanning(false)) {
+					//???这是什么意思？range不更新？
+                    if (!start_scanning(false)) 
+					{
                         emit thread_->receive_failed(urg_.what());
                         return;
                     }
                     continue;
                 }
 
-                if (mode_ == Seekable) {
+                if (mode_ == Seekable)
+				{
                     long total_play_second;
                     long msec_to_next_scan;
-                    urg_log_reader_.scan_data(scan_count,
-                                              total_play_second,
-                                              msec_to_next_scan);
+                    urg_log_reader_.scan_data(scan_count, total_play_second,msec_to_next_scan);
                     msec_to_next_scan /= timestamp_unit;
                     msleep(msec_to_next_scan / play_speed_magnification);
-                    emit thread_->played(total_play_second / timestamp_unit,
-                                         scan_count);
+                    emit thread_->played(total_play_second / timestamp_unit, scan_count);
                 }
                 ++scan_count;
-                if (left_recording_scans > 0) {
+                if (left_recording_scans > 0) 
+				{
+					//缓存csv数据到集合中
                     csv_recorder_.set_receive_data(distance, intensity);
-                    if (--left_recording_scans == 0) {
+                    if (--left_recording_scans == 0) 
+					{
                         emit thread_->csv_recording_percent(100);
                         emit thread_->csv_recording_completed();
-                    } else {
-                        int percent = 100 - (100.0 * left_recording_scans
-                                             / total_recording_scans);
+                    } 
+					else 
+					{
+                        int percent = 100 - (100.0 * left_recording_scans / total_recording_scans);
                         emit thread_->csv_recording_percent(percent);
                     }
                 }
                 long msec_timestamp = timestamp / timestamp_unit;
-                plugin_get_measurement_data(type, distance.size(),
-                                            &distance[0], &intensity[0],
-                                            msec_timestamp);
-                plotter_2d_widget_.
-                    set_plot_data(type, distance, intensity, msec_timestamp);
-                if (mode_ == Recording) {
-                    emit thread_->recorded(scan_count, loss_count);
+                plugin_get_measurement_data(type, distance.size(), &distance[0], &intensity[0],msec_timestamp);
+                plotter_2d_widget_.set_plot_data(type, distance, intensity, msec_timestamp);
+                if (mode_ == Recording) 
+				{
+                    emit thread_->recorded(scan_count, loss_count);//记录完毕
                 }
                 bool not_redraw = false;
-                if ((mode_ == Recording) || (mode_ == Normal)) {
+                if ((mode_ == Recording) || (mode_ == Normal))
+				{
                     unsigned short diff = timestamp - previous_timestamp;
                     previous_timestamp = timestamp;
                     diff /= timestamp_unit;
 
-                    if (scan_count > 1) {
-                        loss_count += ceill(abs(diff - scan_msec) / scan_msec)
-                            / (scan_interval_ + 1);
+                    if (scan_count > 1) 
+					{
+                        loss_count += ceill(abs(diff - scan_msec) / scan_msec) / (scan_interval_ + 1);
                     }
 
-                    if (cycle_timer.elapsed() < (scan_msec / 2)) {
+                    if (cycle_timer.elapsed() < (scan_msec / 2))
+					{
                         not_redraw = true;
                     }
                     cycle_timer.restart();
                 }
 
                 enum { Force_draw_interval = 10 };
-                if (!not_redraw ||
-                    (consecutive_loss_times >= Force_draw_interval)) {
+                if (!not_redraw ||(consecutive_loss_times >= Force_draw_interval)) 
+				{
                     consecutive_loss_times = 0;
-                    emit thread_->received();
+                    emit thread_->received();//线程抛出消息，接收完毕
                 }
                 ++consecutive_loss_times;
             }
@@ -205,23 +219,24 @@ struct Receive_thread::pImpl
                 next_scan_index_ = Invalid_scan_index;
             }
         }
-        urg_.stop_measurement();
+        urg_.stop_measurement();//停止测量
 
         if (mode_ == Recording) {
             emit thread_->recorded(0, 0);
         }
     }
 
-
+	//从线程到硬件层次，开始扫描？？
     bool start_scanning(bool range_updated)
     {
-        if (range_updated) {
-            urg_.set_scanning_parameter(setting_.first_step, setting_.last_step,
-                                        setting_.group_steps);
+        if (range_updated) 
+		{
+            urg_.set_scanning_parameter(setting_.first_step, setting_.last_step,setting_.group_steps);
         }
         Lidar::measurement_t type = measurement_type();
-        if (!urg_.start_measurement(type, Urg_driver::Infinity_scan_times,
-                                    scan_interval_)) {
+		//注意此处调用了URG的start_measurement方法
+        if (!urg_.start_measurement(type, Urg_driver::Infinity_scan_times,scan_interval_)) 
+		{
             return false;
         }
         return true;
@@ -231,41 +246,56 @@ struct Receive_thread::pImpl
     Lidar::measurement_t measurement_type(void)
     {
         Lidar::measurement_t type;
-        if (setting_.is_multiecho) {
-            if (setting_.with_intensity) {
+        if (setting_.is_multiecho) 
+		{
+            if (setting_.with_intensity) 
+			{
                 type = Lidar::Multiecho_intensity;
-            } else {
+            } 
+			else 
+			{
                 type = Lidar::Multiecho;
             }
-        } else {
-            if (setting_.with_intensity) {
+        } 
+		else 
+		{
+            if (setting_.with_intensity)
+			{
                 type = Lidar::Distance_intensity;
-            } else {
+            } 
+			else 
+			{
                 type = Lidar::Distance;
             }
         }
         return type;
     }
 
-    bool receive_data(vector<long>& distance,
-                      vector<unsigned short>& intensity, long& timestamp)
+    bool receive_data(vector<long>& distance,vector<unsigned short>& intensity, long& timestamp)
     {
         bool ret;
 
-        if (setting_.with_intensity) {
-            if (setting_.is_multiecho) {
-                ret = urg_.get_multiecho_intensity(distance, intensity,
-                                                   &timestamp);
-            } else {
-                ret = urg_.get_distance_intensity(distance, intensity,
-                                                  &timestamp);
+        if (setting_.with_intensity)
+		{
+            if (setting_.is_multiecho) 
+			{
+                ret = urg_.get_multiecho_intensity(distance, intensity,&timestamp);
+            } 
+			else 
+			{
+                ret = urg_.get_distance_intensity(distance, intensity,&timestamp);
             }
-        } else {
+        } 
+		else 
+		{
             intensity.clear();
 
-            if (setting_.is_multiecho) {
+            if (setting_.is_multiecho) 
+			{
                 ret = urg_.get_multiecho(distance, &timestamp);
-            } else {
+            } 
+			else 
+			{
                 ret = urg_.get_distance(distance, &timestamp);
             }
         }
@@ -274,14 +304,12 @@ struct Receive_thread::pImpl
     }
     void start_csv_recording(void)
     {
-        csv_recorder_.set_scan_setting(urg_.sensor_product_type(),
-                                       setting_, urg_.max_echo_size());
+        csv_recorder_.set_scan_setting(urg_.sensor_product_type(), setting_, urg_.max_echo_size());
         csv_recording_scans_ = csv_recorder_.recordable_scan_times();
     }
 };
 
-Receive_thread::Receive_thread(hrk::Urg_driver& urg,
-                               hrk::Urg_log_reader& urg_log_reader,
+Receive_thread::Receive_thread(hrk::Urg_driver& urg, hrk::Urg_log_reader& urg_log_reader,
                                Plotter_2d_widget& plotter_2d_widget)
     : pimpl(new pImpl(this, urg, urg_log_reader, plotter_2d_widget))
 {
@@ -313,7 +341,7 @@ void Receive_thread::set_play_speed(double magnification)
     pimpl->play_speed_magnification_ = magnification;
     pimpl->mutex_.unlock();
 }
-
+//接收线程，后台开始运行
 void Receive_thread::run(void)
 {
     pimpl->receive_thread();
@@ -361,7 +389,7 @@ void Receive_thread::receive_one_scan(void)
     pimpl->receive_one_scan_ = true;
     pimpl->mutex_.unlock();
 }
-
+//点击保存csv之后，才开启记录csv
 void Receive_thread::start_csv_recording(void)
 {
     pimpl->mutex_.lock();

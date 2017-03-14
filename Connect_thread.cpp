@@ -3,7 +3,7 @@
 
 using namespace hrk;
 using namespace std;
-
+//数据结构定义
 struct Connect_thread::pImpl
 {
     Connect_thread* thread_;
@@ -28,7 +28,7 @@ Connect_thread::Connect_thread(hrk::Urg_driver& urg)
 Connect_thread::~Connect_thread(void)
 {
 }
-
+//后台运行线程
 void Connect_thread::run(void)
 {
     bool ret = false;
@@ -43,11 +43,11 @@ void Connect_thread::run(void)
     }
     if (ret) 
 	{
-        emit connected();
+        emit connected();//发出消息，连接成功
     } 
 	else
 	{
-        emit connect_failed(pimpl->urg_.what());
+        emit connect_failed(pimpl->urg_.what());//发出消息，连接失败
     }
 }
 

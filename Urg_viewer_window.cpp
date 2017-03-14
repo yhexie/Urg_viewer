@@ -106,7 +106,9 @@ struct Urg_viewer_window::pImpl
 
     Urg_log_reader urg_log_reader_;
     QTimer redraw_timer_;
+	//URG连接线程
     Connect_thread connect_thread_;
+	//URG采集线程
     Receive_thread receive_thread_;
     State_forms state_forms_;
     State::state_t current_state_;
@@ -118,6 +120,7 @@ struct Urg_viewer_window::pImpl
 
     string error_message_;
     Connection* original_connection_;
+	//记录器，记录txt
     Receive_recorder receive_recorder_;
     QString last_access_folder_;
     QString recording_file_;
@@ -187,20 +190,15 @@ struct Urg_viewer_window::pImpl
                 widget_, SLOT(rescan_clicked()));
         connect(serial_connection_widget_,
                 SIGNAL(connect_clicked(const std::string&, long)),
-                widget_,
-                SLOT(serial_connect_clicked(const std::string&, long)));
-        connect(ethernet_connection_widget_,
-                SIGNAL(connect_clicked(const std::string&, long)),
-                widget_,
-                SLOT(ethernet_connect_clicked(const std::string&, long)));
+                widget_, SLOT(serial_connect_clicked(const std::string&, long)));
+        connect(ethernet_connection_widget_, SIGNAL(connect_clicked(const std::string&, long)),
+                widget_, SLOT(ethernet_connect_clicked(const std::string&, long)));
         connect(serial_connection_widget_, SIGNAL(disconnect_clicked()),
                 widget_, SLOT(disconnect_clicked()));
-        connect(ethernet_connection_widget_, SIGNAL(disconnect_clicked()),
-                widget_, SLOT(disconnect_clicked()));
-        connect(&connect_thread_, SIGNAL(connected()),
-                widget_, SLOT(urg_connected()));
-        connect(&connect_thread_, SIGNAL(connect_failed(const QString&)),
-                widget_, SLOT(urg_connect_failed(const QString&)));
+        connect(ethernet_connection_widget_, SIGNAL(disconnect_clicked()), widget_, SLOT(disconnect_clicked()));
+		//连接信号与槽，URG连接
+        connect(&connect_thread_, SIGNAL(connected()), widget_, SLOT(urg_connected()));
+        connect(&connect_thread_, SIGNAL(connect_failed(const QString&)), widget_, SLOT(urg_connect_failed(const QString&)));
 
         // signals about playing & recording
         connect(&player_widget_, SIGNAL(folder_clicked()),
@@ -244,16 +242,15 @@ struct Urg_viewer_window::pImpl
                 widget_, SLOT(play_slower()));
 
         // data receiving
-        connect(&redraw_timer_, SIGNAL(timeout()),
-                widget_, SLOT(length_data_received()));
-        connect(&player_widget_, SIGNAL(stop_clicked()),
-                widget_, SLOT(stop_playing_clicked()));
-        connect(&receive_thread_, SIGNAL(receive_failed(const char*)),
-                widget_, SLOT(receive_failed(const char*)));
-
+		//数据接收到以后
+        connect(&redraw_timer_, SIGNAL(timeout()),widget_, SLOT(length_data_received()));
+        connect(&player_widget_, SIGNAL(stop_clicked()),widget_, SLOT(stop_playing_clicked()));
+       
         // signals about data showing
-        connect(&receive_thread_, SIGNAL(received()),
-                widget_, SLOT(length_data_received()));
+		//数据展示
+        connect(&receive_thread_, SIGNAL(received()),widget_, SLOT(length_data_received()));
+		connect(&receive_thread_, SIGNAL(receive_failed(const char*)),widget_, SLOT(receive_failed(const char*)));
+
         connect(&step_value_widget_, SIGNAL(config_changed(bool, bool)),
                 widget_, SLOT(scan_config_changed(bool, bool)));
         connect(&step_value_widget_, SIGNAL(update_requested()),
@@ -491,7 +488,7 @@ struct Urg_viewer_window::pImpl
         last_device_or_address_ = device_or_address;
         last_baudrate_or_port_ = baudrate_or_port;
         last_type_ = type;
-
+		//启动连接线程
         connect_thread_.start();
     }
 
@@ -501,17 +498,17 @@ struct Urg_viewer_window::pImpl
         connect_device(last_device_or_address_, last_baudrate_or_port_,
                        last_type_);
     }
-
+	//开始测量
     void start_measurement(void)
     {
         set_scan_parameter();
-        start_receiving();
+        start_receiving();//开始接收数据
     }
-
+	//停止测量
     void stop_measurement(void)
-    {
-        stop_receiving();
-        stop_csv_recording();
+    {	
+        stop_receiving();//停止接收数据	
+        stop_csv_recording();//停止记录数据CSV文件
     }
 
     void restart_measurement(void)
@@ -519,13 +516,13 @@ struct Urg_viewer_window::pImpl
         stop_measurement();
         start_measurement();
     }
-
+	//开始接收数据
     void start_receiving(void)
     {
         redraw_timer_.stop();
-        receive_thread_.start();
+        receive_thread_.start();//开始接收线程
     }
-
+	//停止接收数据
     void stop_receiving(void)
     {
         receive_thread_.stop();
@@ -537,10 +534,12 @@ struct Urg_viewer_window::pImpl
 
     void stop_csv_recording(void)
     {
-        if (current_state_ == State::Playing) {
+        if (current_state_ == State::Playing) 
+		{
             player_widget_.set_folder_enabled(true);
             player_widget_.set_pause_enabled(true);
-            if (is_pausing_) {
+            if (is_pausing_) 
+			{
                 receive_thread_.pause();
             }
         }
@@ -567,30 +566,31 @@ struct Urg_viewer_window::pImpl
         next_scan_setting_.group_steps = 1;
         next_scan_interval_ = 0;
     }
-
+	//开始记录数据
     bool start_recording(void)
     {
-        QString save_timing = QDateTime::currentDateTime().
-            toString("yyyyMMdd_hhmmss");
+        QString save_timing = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
         recording_file_ = "received_" + save_timing + ".txt";
 
         original_connection_ = urg_.connection();
-        if (!receive_recorder_.open(original_connection_,
-                                    recording_file_.toStdString().c_str())) {
+		//打开记录器
+        if (!receive_recorder_.open(original_connection_,recording_file_.toStdString().c_str())) 
+		{
             error_message_ = receive_recorder_.what();
             return false;
         }
-
+		//打开URG
         if (!urg_.open(&receive_recorder_)) {
             return false;
         }
 
         receive_thread_.set_mode(Receive_thread::Recording);
-        start_receiving();
+		
+        start_receiving();//开始接收数据
 
         return true;
     }
-
+	//停止记录数据
     void stop_recording(void)
     {
         stop_measurement();
@@ -644,7 +644,6 @@ struct Urg_viewer_window::pImpl
             { "URG-04LX", false, false },
             { "URG-04LX-UG01", false, false },
             { "UBG-04LX-F01", false, false },
-
             { "UTM-30LX", true, false },
         };
 
@@ -755,7 +754,7 @@ struct Urg_viewer_window::pImpl
 
     void stop_viewing(void)
     {
-
+		//停止测量
         stop_measurement();
         urg_.close();
     }
@@ -1000,8 +999,10 @@ void Urg_viewer_window::serial_connect_clicked(const std::string& device,
 {
     pimpl->connect_retry_count_ = 0;
     pimpl->last_ethernet_address_ = "";
-    pimpl->next_state_ = State::Viewing;
+    pimpl->next_state_ = State::Viewing;//串口连接后，开始数据展示
     string actual_device_name = device.substr(0, device.find(' '));
+	//点击按钮，执行设备连接，串口
+	//里面会开启连接线程。
     pimpl->connect_device(actual_device_name, baudrate, Urg_driver::Serial);
 }
 
@@ -1038,20 +1039,19 @@ void Urg_viewer_window::rescan_clicked(void)
 
 void Urg_viewer_window::folder_clicked(void)
 {
-    QString open_file =
-        QFileDialog::getOpenFileName(this, tr("load log file"),
-                                     pimpl->last_access_folder_,
-                                     tr("text files (*.txt);;all files (*.*)"));
-    if (open_file.isEmpty()) {
+    QString open_file =QFileDialog::getOpenFileName(this, tr("load log file"), 
+		pimpl->last_access_folder_,tr("text files (*.txt);;all files (*.*)"));
+    if (open_file.isEmpty())
+	{
         return;
     }
 
     pimpl->stop_playing();
-    if (!pimpl->set_play_file(open_file)) {
+    if (!pimpl->set_play_file(open_file)) 
+	{
         pimpl->show_log_file_error_message(open_file);
         return;
     }
-
     QFileInfo dir(open_file);
     pimpl->last_access_folder_ = dir.absoluteDir().path();
 }
@@ -1060,11 +1060,10 @@ void Urg_viewer_window::record_clicked(void)
 {
     pimpl->set_state_forms(State::Recording);
     pimpl->stop_measurement();
-    if (!pimpl->start_recording()) {
+    if (!pimpl->start_recording()) 
+	{
         pimpl->set_state_forms(State::Not_connected);
-
-        QMessageBox::warning(this, tr("Recording error"),
-                             pimpl->error_message_.c_str());
+        QMessageBox::warning(this, tr("Recording error"),pimpl->error_message_.c_str());
         return;
     }
 }
@@ -1085,23 +1084,29 @@ void Urg_viewer_window::record_stop_clicked(void)
 #endif
 }
 
+//后台线程连接URG成功后，前端执行的消息
 void Urg_viewer_window::urg_connected(void)
 {
-    switch (pimpl->next_state_) {
+    switch (pimpl->next_state_) 
+	{
     case State::Viewing:
         pimpl->restrict_config_by_product_name();
         pimpl->scan_setting_widget_.load_sensor_setting(pimpl->urg_);
-        if (pimpl->load_default_when_connected_) {
+        if (pimpl->load_default_when_connected_) 
+		{
             pimpl->load_default_scan_setting();
-        } else {
+        } 
+		else 
+		{
             pimpl->load_default_when_connected_ = true;
         }
-        // throught down
+        // throught down，没有break，一直往下走
 
     case State::Recording:
         pimpl->set_product_name_title();
         pimpl->set_state_forms(pimpl->next_state_);
         pimpl->plotter_2d_widget_.step_value_requested();
+		//开始测量
         pimpl->start_measurement();
         break;
 
@@ -1116,6 +1121,7 @@ void Urg_viewer_window::urg_connected(void)
     plugin_open_device();
 }
 
+//URG连接失败
 void Urg_viewer_window::urg_connect_failed(const QString& error_message)
 {
     pimpl->connection_widget_.set_connected(false);
@@ -1275,7 +1281,7 @@ void Urg_viewer_window::play_slower(void)
         = max(1.0, pimpl->play_speed_magnification_ / 2.0);
     pimpl->set_play_speed(pimpl->play_speed_magnification_);
 }
-
+//点击保存csv按钮，开启csv记录
 void Urg_viewer_window::save_as_csv(void)
 {
     if (csv_progress_bar_->isVisible()) {
@@ -1293,6 +1299,7 @@ void Urg_viewer_window::save_as_csv(void)
     }
 
     csv_progress_bar_->setVisible(true);
+	//开启csv文件保存
     pimpl->receive_thread_.start_csv_recording();
 }
 

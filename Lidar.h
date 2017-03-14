@@ -1,15 +1,6 @@
 #ifndef HRK_LIDAR_H
 #define HRK_LIDAR_H
 
-/*!
-  \file
-  \brief Lidar インターフェース
-
-  \author Satofumi KAMIMURA
-
-  $Id: lidar.h 1937 2010-10-25 01:12:49Z satofumi $
-*/
-
 #include <vector>
 #include <cstddef>
 

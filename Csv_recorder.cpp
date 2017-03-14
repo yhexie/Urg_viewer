@@ -9,8 +9,9 @@ namespace
 {
     typedef vector<vector<long> > Distances;
     typedef vector<vector<unsigned short> > Intensities;
-
+	//excel中最大存储的列数
     const int Exel_max_column_size = 255;
+	//csv文件中记录的最大记录数目为100
     const int Max_record_times = 100;
 }
 
@@ -49,7 +50,7 @@ struct Csv_recorder::pImpl
         return column_size;
     }
 
-
+	//csv缓存数据的条数
     size_t recordable_scan_times(void)
     {
         int column_size = scan_column_size();
@@ -149,18 +150,19 @@ void Csv_recorder::set_scan_setting(const std::string& product_type,
     pimpl->steps_ = setting.last_step - setting.first_step + 1;
     pimpl->max_echo_size_ = max_echo_size;
 }
-
+//计算csv文件保存的记录数目
 size_t Csv_recorder::recordable_scan_times(void) const
 {
     return pimpl->recordable_scan_times();
 }
-
+//保存CSV数据
 void Csv_recorder::set_receive_data(const std::vector<long>& distance,
                                     const std::vector<unsigned short>&
                                     intensity)
 {
     pimpl->distances_.push_back(distance);
-    if (pimpl->setting_.with_intensity) {
+    if (pimpl->setting_.with_intensity) 
+	{
         pimpl->intensities_.push_back(intensity);
     }
 }

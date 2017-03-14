@@ -207,7 +207,7 @@ struct Urg_driver::pImpl
         return update_sensor_parameter();
     }
 
-
+	//打开URG连接
     bool open(Connection* connection)
     {
         enum { Urg_baudrate = 115200 };
@@ -555,7 +555,7 @@ struct Urg_driver::pImpl
         return true;
     }
 
-
+	//是否打开连接
     bool is_open(void)
     {
         return (connection_) ? connection_->is_open() : false;
@@ -573,7 +573,7 @@ struct Urg_driver::pImpl
         is_receiving_ = false;
     }
 
-
+	//开始测量
     bool start_measurement(measurement_t type, int scan_times, int skip_scan)
     {
         if ((skip_scan < 0) || (skip_scan > 9)) {
@@ -610,7 +610,7 @@ struct Urg_driver::pImpl
         return ret;
     }
 
-
+	//停止测量
     void stop_measurement(void)
     {
         if (!is_open()) {

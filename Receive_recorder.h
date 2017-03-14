@@ -1,14 +1,6 @@
 #ifndef HRK_RECEIVE_RECORDER_H
 #define HRK_RECEIVE_RECORDER_H
 
-/*!
-  \file
-  \brie 受信データを記録する Connection クラス
-
-  \author Satofumi Kamimura
-
-  $Id$
-*/
 
 #include <memory>
 #include "Connection.h"
@@ -23,13 +15,11 @@ namespace hrk
         ~Receive_recorder(void);
 
         /*!
-          \brief 記録対象を登録する
-
-          \param[in] connection 記録対象
-          \param[in] file_path 保存するファイル名
-
-          \retval true 成功
-          \retval false 失敗
+          \brief
+          \param[in] connection
+          \param[in] file_path
+          \retval true
+          \retval false
         */
         bool open(Connection* connection, const char* file_path);
 

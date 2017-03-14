@@ -1,14 +1,6 @@
 #ifndef HRK_CONNECTION_UTILS_H
 #define HRK_CONNECTION_UTILS_H
 
-/*!
-  \file
-  \brief Connection 用の補助関数
-
-  \author Satofumi Kamimura
-
-  $Id$
-*/
 
 #include <cstdio>
 

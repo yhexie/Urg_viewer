@@ -72,7 +72,7 @@ struct Scan_setting_widget::pImpl
 
         front_index_ = lidar_->front_step();
 
-        // １周分のステップ数の計算
+        // 一周分钟步数的计算
         total_steps_ = (lidar_->deg2step(+45) - lidar_->deg2step(-45)) * 4;
 
         return true;
@@ -81,7 +81,7 @@ struct Scan_setting_widget::pImpl
 
     void apply_sensor_setting(void)
     {
-        // 新しい設定での計測を指示する
+        //指示新设置的测量
         widget_->emit scan_setting_updated(setting_, scan_interval_);
     }
 
@@ -137,7 +137,7 @@ void Scan_setting_widget::set_control_enabled(bool enable)
 
 bool Scan_setting_widget::load_sensor_setting(hrk::Lidar& lidar)
 {
-    // デフォルト設定を使わない場合は、読み込みを行わない
+    //
     if (!pimpl->use_default_) {
         pimpl->update_preview_widget();
         return false;
