@@ -190,33 +190,37 @@ struct Serial::pImpl
 
     int read(char* data, size_t max_data_size, int timeout)
     {
-        if (!is_open()) {
+        if (!is_open())
+		{
             error_message_ = "not opened.";
             return -1;
         }
 
-        if (max_data_size <= 0) {
+        if (max_data_size <= 0) 
+		{
             return 0;
         }
 
         int filled_size = 0;
         int buffer_size = ring_buffer_.size();
         int read_size = max_data_size - filled_size;
-        if (buffer_size < read_size) {
+        if (buffer_size < read_size) 
+		{
             enum { Buffer_size = 4096 };
             char buffer[Buffer_size];
             int n = internal_receive(buffer, Buffer_size, 0);
-            if (n > 0) {
+            if (n > 0) 
+			{
                 buffer_size += ring_buffer_.push(buffer, n);
             }
         }
 
         read_size = min(read_size, buffer_size);
-        if (read_size > 0) {
+        if (read_size > 0)
+		{
             filled_size += ring_buffer_.pop(&data[filled_size], read_size);
         }
-        filled_size += internal_receive(&data[filled_size],
-                                        max_data_size - filled_size, timeout);
+        filled_size += internal_receive(&data[filled_size],max_data_size - filled_size, timeout);
         return filled_size;
     }
 

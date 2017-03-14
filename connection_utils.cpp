@@ -20,11 +20,13 @@ void hrk::ignore(hrk::Connection* connection, int timeout, int size)
     char buffer[Buffer_size];
 
     int left_size = size;
-    while (true) {
+    while (true)
+	{
         int read_size = (size == Connection_utils_infinity) ?
             Buffer_size : min(left_size, static_cast<int>(Buffer_size));
         int n = connection->read(buffer, read_size, timeout);
-        if (n <= 0) {
+        if (n <= 0)
+		{
             return;
         }
         left_size -= n;

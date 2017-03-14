@@ -369,22 +369,24 @@ struct Urg_driver::pImpl
             int ret = scip_response(created_connection_,
                                     "QT\n", qt_expected, Max_timeout,
                                     receive_buffer, Receive_buffer_size);
-            if (ret >= 0) {
-                if (!strcmp(receive_buffer, "E")) {
+            if (ret >= 0) 
+			{
+                if (!strcmp(receive_buffer, "E")) 
+				{
                     int scip20_expected[] = { 0, Expected_end };
 
+					//注意这里的ignore函数，很奇怪，难度记录是在这里读取去和写出的？
                     ignore(created_connection_, Max_timeout);
 
-                    ret = scip_response(created_connection_,
-                                        "SCIP2.0\n", scip20_expected,
-                                        Max_timeout, NULL, 0);
+                    ret = scip_response(created_connection_,"SCIP2.0\n", scip20_expected,Max_timeout, NULL, 0);
                     // SCIP2.0
                     ignore(created_connection_, Max_timeout);
 
-                    return change_sensor_baudrate(try_baudrate[i],
-                                                  urg_baudrate);
+                    return change_sensor_baudrate(try_baudrate[i],  urg_baudrate);
 
-                } else if (!strcmp(receive_buffer, "0Ee")) {
+                } 
+				else if (!strcmp(receive_buffer, "0Ee")) 
+				{
                     int tm2_expected[] = { 0, Expected_end };
 
                     // "0Ee" // "TM2"
@@ -394,7 +396,8 @@ struct Urg_driver::pImpl
                 }
             }
 
-            if (ret <= 0) {
+            if (ret <= 0) 
+			{
                 if (ret == Urg_invalid_response_error) 
 				{
                     send_qt_and_ignore_response(created_connection_, Max_timeout);
